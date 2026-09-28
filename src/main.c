@@ -6,6 +6,9 @@
  * บรรทัดสุดท้ายของผลลัพธ์ต้องเป็น "RESULT: <verdict> ..." เสมอ
  * (scripts/run_all_tests.sh อ่านบรรทัดนี้)
  */
+ #include <dirent.h>
+#include <errno.h>
+#include <unistd.h>
 #include <getopt.h>
 #include <limits.h>
 #include <stdio.h>
@@ -42,6 +45,52 @@ static void print_json(const judge_report *rep) {
                i ? "," : "", verdict_str(r->verdict), r->cpu_time_ms, r->memory_kb);
     }
     printf("]}\n");
+}
+static void cleanup_work_dir(const char *directory)
+{
+    DIR *dir;
+    struct dirent *entry;
+
+    dir = opendir(directory);
+
+    if (dir == NULL) {
+        return;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        char path[PATH_MAX];
+        int written;
+
+        if (strcmp(entry->d_name, ".") == 0 ||
+            strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        written = snprintf(
+            path,
+            sizeof(path),
+            "%s/%s",
+            directory,
+            entry->d_name
+        );
+
+        if (written < 0 ||
+            (size_t)written >= sizeof(path)) {
+            continue;
+        }
+
+        if (unlink(path) < 0 &&
+            errno != ENOENT) {
+            perror(path);
+        }
+    }
+
+    closedir(dir);
+
+    if (rmdir(directory) < 0 &&
+        errno != ENOENT) {
+        perror(directory);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -109,6 +158,6 @@ int main(int argc, char **argv) {
     if (json) print_json(&rep);
     else      print_table(&rep);
 
-    /* TODO(C): ลบ work_dir หลังใช้งาน (เช่น nftw + remove) */
+    cleanup_work_dir(work_dir);
     return rep.final == AC ? 0 : 1;
 }

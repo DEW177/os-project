@@ -1,7 +1,10 @@
-/* หารด้วยศูนย์ — คาดหวัง RE (SIGFPE) */
 #include <stdio.h>
-int main(void) {
-    volatile int z = 0;
-    printf("%d\n", 1 / z);
+
+int main(void)
+{
+    volatile int zero = 0;
+    int result = 10 / zero;
+
+    printf("%d\n", result);
     return 0;
 }

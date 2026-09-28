@@ -1,48 +1,144 @@
-/*
- * seccomp_filter.c — whitelist syscall ด้วย libseccomp       [สมาชิก B]
- *
- * Syscalls: prctl(PR_SET_NO_NEW_PRIVS), seccomp
- */
+#include <stdint.h>
 #include <stdio.h>
+#include <sys/prctl.h>
+
+#include <seccomp.h>
+
 #include "sandbox.h"
 
-/* TODO(B): #include <seccomp.h>  และ <sys/prctl.h> */
-
 /*
- * รายการตั้งต้น — ต้องยืนยันด้วย `strace -f ./prog` กับโปรแกรมที่ compile แบบ -static
- * syscall ใดไม่อยู่ในนี้ = SCMP_ACT_KILL_PROCESS (โปรแกรมโดน SIGSYS -> verdict SV)
+ * รายการ syscall ที่อนุญาตสำหรับโปรแกรม C แบบ static
+ *
+ * ห้ามเพิ่ม openat, socket, connect, unlink, clone,
+ * execve แบบทั่วไป หรือ syscall ที่ไม่จำเป็น
  */
-static const char *const ALLOWED_SYSCALLS[] = {
-    "read", "write", "readv", "writev",
-    "brk", "mmap", "munmap", "mremap", "mprotect",
-    "fstat", "newfstatat", "lseek",
-    "exit", "exit_group",
-    "arch_prctl", "set_tid_address", "set_robust_list", "rseq",
-    "prlimit64", "getrandom", "futex",
-    "clock_gettime", "clock_nanosleep",   /* ให้ sleep() ทำงานได้ แล้วไปโดน TLE แทน */
+static const char *const allowed_syscalls[] = {
+    "read",
+    "write",
+    "readv",
+    "writev",
+    "close",
+
+    "brk",
+    "mmap",
+    "munmap",
+    "mremap",
+    "mprotect",
+    "madvise",
+
+    "fstat",
+    "newfstatat",
+    "lseek",
+    "readlink",
+    "readlinkat",
+
+    "rt_sigaction",
+    "rt_sigprocmask",
+    "rt_sigreturn",
+    "sigaltstack",
+    
+
+    "exit",
+    "exit_group",
+
+    "arch_prctl",
+    "set_tid_address",
+    "set_robust_list",
+    "rseq",
+
+    "prlimit64",
+    "getrandom",
+    "futex",
+
+    "clock_gettime",
+    "clock_nanosleep",
+    "nanosleep",
+
+    "getpid",
+    "gettid",
+    "sched_yield",
+
     NULL
 };
 
-/*
- * ตัวอย่างที่ต้อง "ไม่" อนุญาต: socket, connect, unlink, unlinkat, rename,
- * mkdir, chmod, fork, vfork, clone, clone3, kill, ptrace, execve (ครั้งที่ 2)
- */
+int apply_seccomp(const char *exe_path)
+{
+    scmp_filter_ctx context;
 
-int apply_seccomp(const char *exe_path) {
+    if (exe_path == NULL) {
+        return -1;
+    }
+
     /*
-     * TODO(B):
-     *  1. prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
-     *  2. ctx = seccomp_init(SCMP_ACT_KILL_PROCESS)
-     *  3. วน ALLOWED_SYSCALLS:
-     *       seccomp_rule_add(ctx, SCMP_ACT_ALLOW, seccomp_syscall_resolve_name(name), 0)
-     *  4. อนุญาต execve เฉพาะเมื่อ argument แรก == exe_path (pointer เดียวกับที่ runner ส่ง)
-     *       seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
-     *                        SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t)exe_path))
-     *  5. seccomp_load(ctx); seccomp_release(ctx)
-     *  คืน 0 = สำเร็จ, -1 = ผิดพลาด
+     * ห้ามยกระดับสิทธิ์หลังจากนี้
      */
-    (void)exe_path;
-    (void)ALLOWED_SYSCALLS;
-    fprintf(stderr, "[seccomp] apply_seccomp(): not implemented yet\n");
-    return -1;
+    if (prctl(
+            PR_SET_NO_NEW_PRIVS,
+            1,
+            0,
+            0,
+            0) < 0) {
+        return -1;
+    }
+
+    /*
+     * syscall ที่ไม่อยู่ใน whitelist จะฆ่า process ทันที
+     */
+    context = seccomp_init(SCMP_ACT_KILL_PROCESS);
+
+    if (context == NULL) {
+        return -1;
+    }
+
+    for (size_t i = 0;
+         allowed_syscalls[i] != NULL;
+         i++) {
+        int syscall_number;
+
+        syscall_number =
+            seccomp_syscall_resolve_name(
+                allowed_syscalls[i]
+            );
+
+        /*
+         * ถ้า syscall ไม่มีใน architecture นี้
+         * ให้ข้ามไป
+         */
+        if (syscall_number < 0) {
+            continue;
+        }
+
+        if (seccomp_rule_add(
+                context,
+                SCMP_ACT_ALLOW,
+                syscall_number,
+                0) < 0) {
+            seccomp_release(context);
+            return -1;
+        }
+    }
+
+    /*
+     * อนุญาต execve เฉพาะครั้งแรก
+     * โดย argument แรกต้องเป็น pointer เดียวกับ exe_path
+     */
+    if (seccomp_rule_add(
+            context,
+            SCMP_ACT_ALLOW,
+            SCMP_SYS(execve),
+            1,
+            SCMP_A0(
+                SCMP_CMP_EQ,
+                (scmp_datum_t)(uintptr_t)exe_path)) < 0) {
+        seccomp_release(context);
+        return -1;
+    }
+
+    if (seccomp_load(context) < 0) {
+        seccomp_release(context);
+        return -1;
+    }
+
+    seccomp_release(context);
+    return 0;
 }
