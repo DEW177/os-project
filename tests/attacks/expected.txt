@@ -1,0 +1,15 @@
+# ไฟล์ใน tests/attacks/      verdict ที่คาดหวัง
+aplusb_correct.c            AC
+aplusb_wrong.c              WA
+infinite_loop.c             TLE
+sleep_forever.c             TLE
+memory_hog.c                MLE
+stack_overflow.c            RE
+output_flood.c              OLE
+fork_bomb.c                 SV
+open_socket.c               SV
+delete_file.c               SV
+system_call_shell.c         SV
+divide_zero.c               RE
+segfault.c                  RE
+compile_bomb.c              CE
