@@ -107,6 +107,8 @@ kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--border);border
 .narr-step{font-family:var(--mono);color:var(--accent);font-weight:600;white-space:nowrap;font-size:14px}
 .narr-text{font-size:17px;line-height:1.6}
 .narr.fade .narr-text,.narr.fade .narr-step{animation:fadeIn .35s ease}
+.narr-analogy{margin-top:6px;font-size:14px;color:var(--muted);padding-left:10px;border-left:3px solid var(--cage);animation:fadeIn .35s ease}
+.narr-analogy b{color:var(--cage);font-weight:600}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}}
 
 /* ---------- stage ---------- */
@@ -303,7 +305,10 @@ footer{max-width:1680px;margin:0 auto;padding:0 20px 20px;color:var(--faint);fon
 
     <div class="card narr" id="narr">
       <div class="narr-step" id="narrStep">พร้อม</div>
-      <div class="narr-text" id="narrText">เลือกตัวอย่างทางซ้าย แล้วกด ▶ รัน</div>
+      <div>
+        <div class="narr-text" id="narrText">เลือกตัวอย่างทางซ้าย แล้วกด ▶ รัน</div>
+        <div class="narr-analogy" id="narrAnalogy" hidden></div>
+      </div>
     </div>
 
     <div class="card stage" id="stage">
@@ -566,10 +571,28 @@ function buildStepper(){
     ol.appendChild(li);
   });
 }
+/* เปรียบเทียบกับการคุมสอบ — แสดงใต้คำอธิบายเมื่อแต่ละขั้นเริ่มทำงาน */
+const ANALOGY = {
+  compile:  'ตรวจก่อนว่ากระดาษคำตอบอ่านออกไหม ก่อนปล่อยเข้าห้องสอบ',
+  fork:     'judge แบ่งร่าง — ร่างหนึ่งเป็นครูคุมสอบ อีกร่างกำลังจะกลายเป็นนักเรียน',
+  setrlimit:'ครูประกาศกฎ: เวลา 1 วินาที กระดาษไม่เกิน 256 MB — เกินเมื่อไร OS จับเองทันที',
+  seccomp:  'ยึดของต้องห้าม — ยกมือขอได้เฉพาะเรื่องในรายการ ขออย่างอื่นโดนไล่ออกทันที',
+  execve:   'นักเรียนเดินเข้าห้องสอบ กฎทั้งหมดติดตัวเข้าไปด้วย ถอดไม่ได้ · ครูตั้งนาฬิกาปลุกเผื่อนักเรียนหลับ',
+  run:      'นักเรียนทำข้อสอบ — จะทำอะไรกับโลกภายนอกต้องยกมือขอครูทุกครั้ง (นั่นคือ syscall)',
+  wait4:    'ครูรอจนนักเรียนออกจากห้อง แล้วดูว่าออกมาแบบไหน (ส่งเอง / ถูกไล่ออก) ใช้เวลาเท่าไร',
+  verdict:  'เทียบคำตอบกับเฉลย แล้วประกาศผล',
+};
 function stage(id, st){
   const li = $(`#stepper li[data-id="${id}"]`);
   li.classList.remove('active','done','fail','skip');
   if (st) li.classList.add(st);
+  if (st === 'active' && ANALOGY[id]) {
+    const a = $('#narrAnalogy');
+    a.hidden = false;
+    a.innerHTML = '<b>เปรียบเทียบ:</b> ';
+    a.appendChild(document.createTextNode(ANALOGY[id]));
+    flash(a, 'narr-analogy');
+  }
 }
 function narrate(step, html){
   $('#narrStep').textContent = step;
@@ -1176,6 +1199,7 @@ function resetView(){
   $('#fx').innerHTML = ''; $('#log').innerHTML = ''; logN = 0; $('#logCount').textContent = '';
   $('#stdout').textContent = ''; $('#chips').innerHTML = '';
   STAGES.forEach(([id]) => stage(id, null));
+  $('#narrAnalogy').hidden = true;
   const cage = $('#cage'); cage.className = 'cage'; $('#cageLabel').textContent = 'SANDBOX';
   $('#filter').className = 'filter'; $('#forkLink').className = 'link';
   const ch = $('#child'); ch.className = 'child'; $('#childDot').className = 'proc-dot';
