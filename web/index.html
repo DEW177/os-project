@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Judge Sandbox Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117; --panel:#151b23; --panel2:#1c2330; --border:#2b3544; --text:#e6edf3; --muted:#9aa7b6; --faint:#667385;
+  --accent:#58a6ff; --ok:#3fb950; --warn:#d29922; --orange:#f0883e; --bad:#f85149; --sv:#bc8cff; --cage:#e3b341; --kernel:#388bfd;
+  --code-bg:#0a0e13; --on-accent:#fff;
+  --font:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#f4f6f9; --panel:#fff; --panel2:#eef2f6; --border:#d3dbe4; --text:#1a2230; --muted:#526072; --faint:#8793a2;
+  --accent:#0969da; --ok:#1a7f37; --warn:#9a6700; --orange:#bc4c00; --bad:#cf222e; --sv:#8250df; --cage:#b08800; --kernel:#0969da;
+  --code-bg:#f6f8fa;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel2);padding:1px 5px;border-radius:4px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap;position:sticky;top:0;z-index:5}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.logo{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--sv));color:#fff;font-family:var(--mono);font-weight:700}
+h1{font-size:18px;margin:0;font-weight:700;line-height:1.25}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:6px 12px;font-size:13px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--panel2);color:var(--text);font-weight:600}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--faint);margin-right:6px;vertical-align:1px}
+.seg button.on .live-dot{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.switch{display:inline-flex;gap:8px;align-items:center;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;user-select:none}
+.switch input{accent-color:var(--bad);margin:0}
+.switch.on{border-color:var(--bad);color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.switch.disabled{opacity:.4;cursor:not-allowed}
+.ghost{background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px}
+.ghost:hover:not(:disabled){background:var(--panel2)}
+.ghost:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:var(--accent);border:0;color:var(--on-accent);border-radius:8px;padding:8px 20px;font-weight:600}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;padding:16px 20px;max-width:1680px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.side .card{padding:14px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 6px;font-weight:600}
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* examples */
+.ex-group{font-size:12px;color:var(--faint);margin:12px 0 4px;padding-left:8px}
+.ex-group:first-child{margin-top:4px}
+.ex{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px}
+.ex:hover{background:var(--panel2)}
+.ex.sel{background:var(--panel2);border-color:var(--accent)}
+.ex .t{flex:1;min-width:0;line-height:1.3}
+.ex .t b{display:block;font-weight:500;font-size:14px}
+.ex .t span{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.vchip{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;background:color-mix(in srgb,var(--vc) 16%,transparent);color:var(--vc);flex:none}
+[data-v="AC"]{--vc:var(--ok)} [data-v="WA"],[data-v="RE"]{--vc:var(--bad)}
+[data-v="TLE"]{--vc:var(--warn)} [data-v="MLE"],[data-v="OLE"]{--vc:var(--orange)}
+[data-v="SV"]{--vc:var(--sv)} [data-v="CE"],[data-v="SE"]{--vc:var(--muted)} [data-v="DANGER"]{--vc:var(--bad)}
+
+/* code */
+.code-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.code-head h2{text-transform:none;letter-spacing:0;font-family:var(--mono);font-size:13px;color:var(--text)}
+.code-head span{font-size:11px;color:var(--faint)}
+#code{width:100%;height:250px;resize:vertical;background:var(--code-bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:12.5px;line-height:1.5;tab-size:4;white-space:pre;overflow:auto}
+#code:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.run-row{display:flex;gap:8px;margin-top:10px}
+.run-row .primary{flex:1}
+.limits{margin-top:10px;font-size:12px;color:var(--faint);font-family:var(--mono)}
+.keys{margin-top:6px;font-size:11px;color:var(--faint)}
+kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 4px}
+
+/* stepper */
+.stepper{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.stepper li{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--panel);min-width:0;transition:border-color .25s,background .25s,opacity .25s}
+.stepper .dot{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--panel2);color:var(--muted);font-family:var(--mono)}
+.stepper .st{min-width:0;line-height:1.2}
+.stepper .st code{background:none;padding:0;font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper .st small{font-size:11px;color:var(--faint);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper li.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel));animation:glow 1.4s ease-in-out infinite}
+.stepper li.active .dot{background:var(--accent);color:#fff}
+.stepper li.done .dot{background:var(--ok);color:#fff}
+.stepper li.done .dot::after{content:"✓"} .stepper li.done .dot span{display:none}
+.stepper li.fail{border-color:var(--bad)} .stepper li.fail .dot{background:var(--bad);color:#fff}
+.stepper li.skip{opacity:.45} .stepper li.skip code{text-decoration:line-through}
+@keyframes glow{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}}
+
+/* narration */
+.narr{padding:14px 18px;display:flex;gap:16px;align-items:baseline;min-height:64px}
+.narr-step{font-family:var(--mono);color:var(--accent);font-weight:600;white-space:nowrap;font-size:14px}
+.narr-text{font-size:17px;line-height:1.6}
+.narr.fade .narr-text,.narr.fade .narr-step{animation:fadeIn .35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}}
+
+/* ---------- stage ---------- */
+.stage{position:relative;display:grid;grid-template-columns:190px 64px minmax(0,1fr) 230px;column-gap:0;row-gap:16px;padding:18px;overflow:hidden}
+.box{border:1px solid var(--border);border-radius:10px;background:var(--panel2);padding:12px}
+.box-title{font-size:12px;font-weight:600;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.proc-head{display:flex;align-items:center;gap:8px;min-width:0}
+.proc-head b{font-family:var(--mono);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pid{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:auto;white-space:nowrap}
+.proc-dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+.proc-dot.on{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.role{font-size:12px;color:var(--faint);margin:2px 0 10px}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-top:6px}
+.kv span{color:var(--muted)} .kv b{font-weight:500;text-align:right}
+.parent{align-self:start}
+.alarm{margin-top:10px;border:1px dashed var(--border);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:13px}
+.alarm span{color:var(--muted)}
+.alarm.ticking{border-color:var(--warn);border-style:solid;color:var(--warn)}
+
+.link{align-self:start;margin-top:52px;position:relative;height:2px;background:var(--border);margin-left:6px;margin-right:6px;transition:background .3s}
+.link span{position:absolute;left:50%;top:-22px;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.link.on{background:var(--accent)} .link.on span{color:var(--accent)}
+.link::after{content:"";position:absolute;right:-2px;top:-4px;border:5px solid transparent;border-left-color:inherit;border-left:6px solid var(--border)}
+.link.on::after{border-left-color:var(--accent)}
+
+.cage{position:relative;border:2px dashed var(--border);border-radius:14px;padding:22px 14px 0;opacity:.35;transition:opacity .4s,border-color .4s,background .4s;display:flex;flex-direction:column;min-width:0}
+.cage-label{position:absolute;top:-11px;left:14px;background:var(--panel);padding:0 8px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--faint);font-weight:600}
+.cage.alive{opacity:1;border-color:var(--muted)}
+.cage.caged{border-style:solid;border-color:var(--cage);background:repeating-linear-gradient(90deg,transparent 0 46px,color-mix(in srgb,var(--cage) 9%,transparent) 46px 48px)}
+.cage.caged .cage-label{color:var(--cage)}
+.cage.unsafe{border-color:var(--bad);border-style:dashed}
+.cage.unsafe .cage-label{color:var(--bad)}
+.child{border:1px solid var(--border);border-radius:10px;background:var(--panel);padding:12px;transition:opacity .4s,filter .4s;flex:1}
+.child.dead{opacity:.55;filter:grayscale(.7)}
+.child.got-sig,.parent.got-sig{animation:shake .45s}
+.proc-status{font-size:13px;color:var(--muted);margin:4px 0 8px;min-height:20px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:4px}
+.chip{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid color-mix(in srgb,var(--cage) 60%,transparent);color:var(--cage);background:color-mix(in srgb,var(--cage) 10%,transparent);animation:pop .3s ease}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+.meter{display:grid;grid-template-columns:48px minmax(0,1fr) 78px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+.ml{font-family:var(--mono);color:var(--muted);font-size:11px}
+.track{position:relative;height:9px;background:var(--border);border-radius:5px}
+.fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--accent);width:0}
+.meter.over .fill{background:var(--bad)}
+.lim{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--cage);opacity:0;transition:opacity .4s}
+.cage.caged .lim,.host .lim{opacity:1}
+.host .lim{background:var(--bad);opacity:.5}
+.mv{font-family:var(--mono);font-size:11.5px;text-align:right;white-space:nowrap}
+.meter.over .mv{color:var(--bad);font-weight:600}
+.stdout{margin-top:8px}
+.stdout span{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.stdout pre{margin:3px 0 0;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-family:var(--mono);font-size:12px;height:48px;overflow:hidden;white-space:pre-wrap;word-break:break-all}
+
+.filter{margin:14px -14px 0;height:34px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--mono);font-size:12px;font-weight:600;border-top:3px solid var(--sv);background:color-mix(in srgb,var(--sv) 13%,transparent);color:var(--sv);border-radius:0 0 11px 11px;transform:scaleX(0);transform-origin:left;transition:transform .7s cubic-bezier(.2,.8,.2,1)}
+.filter.on{transform:scaleX(1)}
+.filter.f-hit{animation:fhit .6s}
+@keyframes fhit{30%{background:color-mix(in srgb,var(--bad) 35%,transparent);border-top-color:var(--bad);color:var(--bad)}}
+.cage-pad{height:14px}
+
+.world{display:flex;flex-direction:column;gap:10px;margin-left:16px;min-width:0}
+.hs{font-size:11px;padding:1px 7px;border-radius:5px;text-transform:none;letter-spacing:0}
+.hs.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.hs.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.hs.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.host.danger{border-color:var(--bad);animation:dangerPulse 1s ease-in-out infinite}
+@keyframes dangerPulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--bad) 25%,transparent)}}
+.rs{font-size:13px;font-family:var(--mono)}
+.rs.ok{color:var(--ok)} .rs.bad{color:var(--bad);font-weight:600}
+.fs{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12px}
+.fs li{padding:2px 0;word-break:break-all}
+.fs li.ok{color:var(--ok)} .fs li.gone{color:var(--bad);text-decoration:line-through} .fs li.bad{color:var(--bad);font-weight:600}
+.box.hit{animation:boxhit .8s}
+@keyframes boxhit{30%{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--panel2))}}
+
+.kernel{grid-column:1/-1;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--kernel) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--kernel) 45%,transparent);font-family:var(--mono);font-size:13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.kernel b{color:var(--kernel)}
+.kernel span{color:var(--muted);font-size:12px;text-align:right}
+.kernel.k-hit{animation:khit .4s}
+@keyframes khit{40%{background:color-mix(in srgb,var(--kernel) 26%,var(--panel))}}
+
+.fx{position:absolute;inset:0;pointer-events:none;z-index:3}
+.pkt,.sigp{position:absolute;left:0;top:0;font-family:var(--mono);font-size:12px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap;will-change:transform}
+.pkt{background:color-mix(in srgb,var(--ok) 20%,var(--panel));border:1px solid var(--ok);color:var(--text)}
+.pkt.warnp{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 20%,var(--panel))}
+.pkt.blocked{border-color:var(--bad);background:var(--bad);color:#fff;animation:shake .4s}
+.sigp{border-radius:999px;padding:4px 12px;color:#111;background:var(--warn);box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.sigp.sv{background:var(--sv);color:#fff} .sigp.bad{background:var(--bad);color:#fff} .sigp.info{background:var(--accent);color:#fff}
+
+/* ---------- bottom ---------- */
+.bottom{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px}
+.term{display:flex;flex-direction:column;overflow:hidden}
+.term-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;display:flex;justify-content:space-between}
+.log{background:var(--code-bg);height:300px;overflow:auto;padding:10px 12px;font-family:var(--mono);font-size:12.5px;line-height:1.55}
+.ln{display:flex;flex-wrap:wrap;gap:0 10px;animation:fadeIn .25s ease}
+.who{min-width:58px;font-weight:600}
+.w-parent{color:var(--accent)} .w-child{color:#39c5cf} .w-prog{color:var(--text)} .w-kernel{color:var(--sv)} .w-gcc{color:var(--orange)} .w-judge,.w-web{color:var(--ok)}
+.ln.bad .tx{color:var(--bad)} .ln.warn .tx{color:var(--warn)} .ln.ok .tx{color:var(--ok)} .ln.sv .tx{color:var(--sv)}
+.hint{flex-basis:100%;padding-left:68px;color:var(--faint);font-family:var(--font);font-size:12px}
+.result{padding:16px;display:flex;flex-direction:column;gap:14px}
+.vcard{display:flex;gap:14px;align-items:flex-start}
+.vbadge{width:74px;height:74px;flex:none;border-radius:14px;display:grid;place-items:center;font-family:var(--mono);font-size:22px;font-weight:700;background:var(--panel2);color:var(--faint);border:2px solid var(--border)}
+.vcard[data-v] .vbadge{background:color-mix(in srgb,var(--vc) 16%,var(--panel));color:var(--vc);border-color:var(--vc)}
+.vcard.popin .vbadge{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+.vname{font-size:18px;font-weight:700;line-height:1.3}
+.vcard[data-v] .vname{color:var(--vc)}
+.vwhy{font-size:14px;margin-top:4px}
+.vguard{display:inline-block;margin-top:8px;font-size:12px;padding:3px 9px;border-radius:6px;background:var(--panel2);border:1px solid var(--border)}
+.vstats{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+.verr{margin:0;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:var(--mono);font-size:11.5px;max-height:120px;overflow:auto;white-space:pre-wrap;color:var(--bad)}
+.checker{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.checker div span{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.checker pre{margin:3px 0 0;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:13px}
+.checker.match pre{border-color:var(--ok)} .checker.diff .act pre{border-color:var(--bad);color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:4px 8px;border-bottom:1px solid var(--border)}
+td{padding:5px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12.5px}
+td.num{text-align:right} th.num{text-align:right}
+tbody tr{animation:fadeIn .3s ease}
+.empty{color:var(--faint);font-size:13px;font-family:var(--font)}
+footer{max-width:1680px;margin:0 auto;padding:0 20px 20px;color:var(--faint);font-size:12px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .app{grid-template-columns:1fr}
+  .stepper{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  .top{padding:10px 16px}
+  .app{padding:12px 16px}
+  .stage{grid-template-columns:1fr;row-gap:14px}
+  .link{display:none}
+  .world{margin-left:0}
+  .bottom{grid-template-columns:1fr}
+  .narr{flex-direction:column;gap:4px}
+  .narr-text{font-size:15px}
+}
+@media (max-width:520px){
+  .stepper{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .checker{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .stepper li.active,.host.danger{animation:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo">{ }</div>
+    <div>
+      <h1>Secure Code Judge Sandbox</h1>
+      <p>รันโค้ดที่ไม่ไว้ใจได้ โดยไม่ให้เครื่องพัง · fork · setrlimit · seccomp · wait4 · alarm</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="โหมด">
+      <button id="modeSim" class="on">โหมดจำลอง</button>
+      <button id="modeLive" disabled title="เปิดผ่าน python3 web/server.py เพื่อใช้ ./judge จริง"><span class="live-dot"></span>Live</button>
+    </div>
+    <label class="switch" id="unsafeWrap" title="ดูว่าถ้ารันโค้ดตรง ๆ ไม่มีกรง จะเกิดอะไรขึ้น">
+      <input type="checkbox" id="unsafeToggle"> ถ้าไม่มี sandbox
+    </label>
+    <div class="seg" id="speedSeg" role="group" aria-label="ความเร็ว">
+      <button data-s="0.5">0.5×</button><button data-s="1" class="on">1×</button><button data-s="2">2×</button>
+    </div>
+    <button id="themeBtn" class="ghost" aria-label="สลับธีม">สว่าง / มืด</button>
+  </div>
+</header>
+
+<main class="app">
+  <aside class="side">
+    <section class="card">
+      <h2>เลือกตัวอย่าง</h2>
+      <div id="exList"></div>
+    </section>
+    <section class="card">
+      <div class="code-head"><h2 id="codeTitle">source.c</h2><span id="codeHint">อ่านอย่างเดียว</span></div>
+      <textarea id="code" spellcheck="false" readonly aria-label="ซอร์สโค้ด"></textarea>
+      <div class="run-row">
+        <button id="runBtn" class="primary">▶ รัน</button>
+        <button id="pauseBtn" class="ghost" disabled>⏸ หยุด</button>
+        <button id="resetBtn" class="ghost" aria-label="รีเซ็ต">↺</button>
+      </div>
+      <div class="limits">limit: CPU 1000 ms · wall 2 s · MEM 256 MB · OUT 1 MB</div>
+      <div class="keys"><kbd>Enter</kbd> รัน · <kbd>Space</kbd> หยุด/เล่นต่อ · <kbd>R</kbd> รีเซ็ต</div>
+    </section>
+  </aside>
+
+  <section class="main">
+    <ol class="stepper" id="stepper"></ol>
+
+    <div class="card narr" id="narr">
+      <div class="narr-step" id="narrStep">พร้อม</div>
+      <div class="narr-text" id="narrText">เลือกตัวอย่างทางซ้าย แล้วกด ▶ รัน</div>
+    </div>
+
+    <div class="card stage" id="stage">
+      <div class="box parent" id="parentBox">
+        <div class="proc-head"><span class="proc-dot on"></span><b>judge</b><span class="pid">pid 4241</span></div>
+        <div class="role">parent · ผู้คุม</div>
+        <div class="kv"><span>สถานะ</span><b id="parentStatus">พร้อม</b></div>
+        <div class="alarm" id="alarm"><span>alarm()</span><b id="alarmVal">—</b></div>
+      </div>
+
+      <div class="link" id="forkLink"><span>fork()</span></div>
+
+      <div class="cage" id="cage">
+        <div class="cage-label" id="cageLabel">SANDBOX</div>
+        <div class="child" id="child">
+          <div class="proc-head"><span class="proc-dot" id="childDot"></span><b id="childName">ยังไม่มี process ลูก</b><span class="pid" id="childPid"></span></div>
+          <div class="proc-status" id="childStatus"></div>
+          <div class="chips" id="chips"></div>
+          <div id="childMeters"></div>
+          <div class="stdout"><span>stdout → 1.out</span><pre id="stdout"></pre></div>
+        </div>
+        <div class="filter" id="filter">seccomp filter · whitelist</div>
+        <div class="cage-pad" id="cagePad"></div>
+      </div>
+
+      <div class="world">
+        <div class="box host" id="hostBox">
+          <div class="box-title">เครื่อง Host <span id="hostState" class="hs ok">ปกติ</span></div>
+          <div id="hostMeters"></div>
+          <div class="kv"><span>processes</span><b id="procs" style="font-family:var(--mono)">212</b></div>
+        </div>
+        <div class="box" id="netBox">
+          <div class="box-title">Network</div>
+          <div id="netState" class="rs">ไม่มีการเชื่อมต่อ</div>
+        </div>
+        <div class="box" id="fsBox">
+          <div class="box-title">Filesystem</div>
+          <ul class="fs" id="fsList"></ul>
+        </div>
+      </div>
+
+      <div class="kernel" id="kernel"><b>Linux Kernel</b><span id="kernelMsg">รับ syscall · ส่ง signal · บังคับ limit</span></div>
+      <div class="fx" id="fx"></div>
+    </div>
+
+    <div class="bottom">
+      <div class="card term">
+        <div class="term-head"><span>syscall log</span><span id="logCount"></span></div>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="card result">
+        <div class="vcard" id="vcard">
+          <div class="vbadge" id="vBadge">—</div>
+          <div>
+            <div class="vname" id="vName">ยังไม่มีผล</div>
+            <div class="vwhy" id="vWhy">ผลตัดสินจะแสดงที่นี่</div>
+            <div class="vguard" id="vGuard" hidden></div>
+            <div class="vstats" id="vStats"></div>
+          </div>
+        </div>
+        <pre class="verr" id="vErr" hidden></pre>
+        <div class="checker" id="checker" hidden>
+          <div><span>expected (1.out)</span><pre id="chkExp"></pre></div>
+          <div class="act"><span>actual (stdout)</span><pre id="chkAct"></pre></div>
+        </div>
+        <table>
+          <thead><tr><th>Test</th><th>Verdict</th><th class="num">Time</th><th class="num">Memory</th></tr></thead>
+          <tbody id="tests"><tr><td colspan="4" class="empty">ยังไม่ได้รัน</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>โหมดจำลองแสดงลำดับ syscall แบบย่อเพื่ออธิบายแนวคิด — ลำดับจริงดูได้ด้วย <code>strace -f</code> และ <code>dmesg | grep audit</code> · โหมด Live เรียก <code>./judge --json</code> ตัวจริงผ่าน <code>python3 web/server.py</code></footer>
+
+<script>
+"use strict";
+/* ================================================================
+ * ข้อมูลตัวอย่าง (สำเนาจาก tests/attacks/ — โหมด Live จะโหลดของจริงจาก server)
+ * ================================================================ */
+const LIM = {time:1000, mem:262144, out:1024};
+const TESTS = [{a:1,b:2},{a:100,b:-5},{a:1000000000,b:1000000000}];
+const GROUPS = {ok:'โปรแกรมปกติ', res:'กินทรัพยากร', atk:'โจมตีระบบ', err:'พังเอง / คอมไพล์ไม่ผ่าน'};
+
+const EX = [
+{id:'aplusb_correct', g:'ok', title:'A+B ถูกต้อง', exp:'AC', desc:'โปรแกรมปกติ อ่าน a b แล้วพิมพ์ a+b', answer:(a,b)=>a+b,
+ src:String.raw`/* โปรแกรมปกติ — คาดหวัง AC */
+#include <stdio.h>
+int main(void) {
+    long long a, b;
+    if (scanf("%lld %lld", &a, &b) != 2) return 1;
+    printf("%lld\n", a + b);
+    return 0;
+}`},
+{id:'aplusb_wrong', g:'ok', title:'A+B ตอบผิด', exp:'WA', desc:'รันจบปกติ แต่พิมพ์ a−b', answer:(a,b)=>a-b,
+ src:String.raw`/* คำตอบผิด — คาดหวัง WA */
+#include <stdio.h>
+int main(void) {
+    long long a, b;
+    if (scanf("%lld %lld", &a, &b) != 2) return 1;
+    printf("%lld\n", a - b);
+    return 0;
+}`},
+{id:'infinite_loop', g:'res', title:'วนลูปไม่จบ', exp:'TLE', desc:'while(1) เผา CPU ไม่หยุด', guard:'setrlimit(RLIMIT_CPU)',
+ src:String.raw`/* วนไม่จบ — คาดหวัง TLE (RLIMIT_CPU -> SIGXCPU) */
+int main(void) {
+    volatile unsigned long i = 0;
+    while (1) i++;
+}`},
+{id:'sleep_forever', g:'res', title:'หลับไม่ตื่น', exp:'TLE', desc:'sleep(100) ไม่ใช้ CPU แต่ไม่ยอมจบ', guard:'alarm() + kill()',
+ src:String.raw`/* ไม่ใช้ CPU แต่ไม่จบ — คาดหวัง TLE (ต้องจับด้วย alarm/wall time ไม่ใช่ RLIMIT_CPU) */
+#include <unistd.h>
+int main(void) {
+    sleep(100);
+    return 0;
+}`},
+{id:'memory_hog', g:'res', title:'กิน RAM ไม่หยุด', exp:'MLE', desc:'malloc ครั้งละ 1 MB ไปเรื่อย ๆ', guard:'setrlimit(RLIMIT_AS) + ru_maxrss',
+ src:String.raw`/* จองหน่วยความจำไม่หยุด — คาดหวัง MLE (RLIMIT_AS + ru_maxrss) */
+#include <stdlib.h>
+#include <string.h>
+int main(void) {
+    while (1) {
+        char *p = malloc(1 << 20);   /* 1 MB */
+        memset(p, 1, 1 << 20);       /* แตะทุกหน้าให้ RSS ขึ้นจริง */
+    }
+}`},
+{id:'output_flood', g:'res', title:'พิมพ์ไม่หยุด', exp:'OLE', desc:'puts วนไม่หยุด จนไฟล์ output ใหญ่ขึ้นเรื่อย ๆ', guard:'setrlimit(RLIMIT_FSIZE)',
+ src:String.raw`/* พิมพ์ไม่หยุด — คาดหวัง OLE (RLIMIT_FSIZE -> SIGXFSZ) */
+#include <stdio.h>
+int main(void) {
+    while (1) puts("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+}`},
+{id:'fork_bomb', g:'atk', title:'Fork bomb', exp:'SV', desc:'สร้าง process ซ้อน ๆ ให้เครื่องล่ม', guard:'seccomp (+ RLIMIT_NPROC)',
+ src:String.raw`/*
+ * พยายามสร้าง process — คาดหวัง SV (seccomp บล็อก clone/fork)
+ * หมายเหตุ: จำกัดไว้ 64 ครั้งโดยตั้งใจ เพื่อไม่ให้เครื่องค้างระหว่างที่ sandbox ยังทำไม่เสร็จ
+ * (fork bomb จริงคือ while(1) fork(); — ห้ามรันนอก VM)
+ */
+#include <unistd.h>
+int main(void) {
+    for (int i = 0; i < 64; i++) {
+        if (fork() == 0) { sleep(1); _exit(0); }
+    }
+    return 0;
+}`},
+{id:'open_socket', g:'atk', title:'แอบต่อเน็ต', exp:'SV', desc:'เปิด socket ต่อไปที่ 1.1.1.1:80', guard:'seccomp',
+ src:String.raw`/* เปิด network — คาดหวัง SV (seccomp บล็อก socket) */
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <unistd.h>
+int main(void) {
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr = { .sin_family = AF_INET, .sin_port = htons(80) };
+    inet_pton(AF_INET, "1.1.1.1", &addr.sin_addr);
+    connect(fd, (struct sockaddr *)&addr, sizeof addr);
+    printf("connected\n");
+    close(fd);
+    return 0;
+}`},
+{id:'delete_file', g:'atk', title:'ลบไฟล์ในเครื่อง', exp:'SV', desc:'unlink ไฟล์ /tmp/judge_canary.txt ของเครื่อง', guard:'seccomp',
+ src:String.raw`/*
+ * ลบไฟล์นอก sandbox — คาดหวัง SV (seccomp บล็อก unlink/unlinkat)
+ * scripts/run_all_tests.sh จะสร้างไฟล์ canary ไว้ก่อน แล้วตรวจว่ายังอยู่
+ */
+#include <unistd.h>
+int main(void) {
+    unlink("/tmp/judge_canary.txt");
+    return 0;
+}`},
+{id:'system_call_shell', g:'atk', title:'เรียก shell', exp:'SV', desc:'system() เปิด /bin/sh รันคำสั่งอะไรก็ได้', guard:'seccomp (execve ได้แค่ ./prog)',
+ src:String.raw`/*
+ * เรียก shell — คาดหวัง SV (system() ต้อง fork+execve ซึ่งถูกบล็อก)
+ * ใช้ touch แทน rm โดยตั้งใจ; scripts/run_all_tests.sh ตรวจว่าไฟล์ไม่ถูกสร้าง
+ */
+#include <stdlib.h>
+int main(void) {
+    system("touch /tmp/judge_pwned");
+    return 0;
+}`},
+{id:'stack_overflow', g:'err', title:'Recursion ไม่จบ', exp:'RE', desc:'ฟังก์ชันเรียกตัวเองไม่มีจุดจบ', guard:'setrlimit(RLIMIT_STACK)',
+ src:String.raw`/* recursion ไม่จบ — คาดหวัง RE (SIGSEGV จาก RLIMIT_STACK) */
+int f(int n) {
+    volatile char buf[1024];
+    buf[0] = (char)n;
+    return f(n + 1) + buf[0];
+}
+int main(void) { return f(0); }`},
+{id:'divide_zero', g:'err', title:'หารด้วยศูนย์', exp:'RE', desc:'คำนวณ 1 / 0',
+ src:String.raw`/* หารด้วยศูนย์ — คาดหวัง RE (SIGFPE) */
+#include <stdio.h>
+int main(void) {
+    volatile int z = 0;
+    printf("%d\n", 1 / z);
+    return 0;
+}`},
+{id:'segfault', g:'err', title:'Segfault', exp:'RE', desc:'เขียนค่าลง NULL pointer',
+ src:String.raw`/* เข้าถึง NULL — คาดหวัง RE (SIGSEGV) */
+int main(void) {
+    volatile int *p = 0;
+    *p = 1;
+    return 0;
+}`},
+{id:'compile_bomb', g:'err', title:'Compile bomb', exp:'CE', desc:'#include "/dev/urandom" ให้ gcc อ่านไม่รู้จบ', guard:'setrlimit + alarm ของขั้น compile',
+ src:String.raw`/*
+ * ทำให้ gcc อ่านไฟล์ไม่รู้จบ — คาดหวัง CE (limit ของ compiler stage)
+ * ⚠ อย่ารันจนกว่า compile_source() จะมี setrlimit + alarm แล้ว
+ */
+#include "/dev/urandom"
+int main(void) { return 0; }`},
+];
+
+const VN = {AC:'Accepted',WA:'Wrong Answer',TLE:'Time Limit Exceeded',MLE:'Memory Limit Exceeded',OLE:'Output Limit Exceeded',RE:'Runtime Error',SV:'Security Violation',CE:'Compile Error',SE:'System Error'};
+const VT = {AC:'ผ่าน',WA:'คำตอบผิด',TLE:'เกินเวลา',MLE:'เกินหน่วยความจำ',OLE:'output เกิน',RE:'โปรแกรมพัง',SV:'เรียก syscall ต้องห้าม',CE:'คอมไพล์ไม่ผ่าน',SE:'judge ผิดพลาด'};
+const STAGES = [
+  ['compile','gcc','คอมไพล์'], ['fork','fork()','แตก process'], ['setrlimit','setrlimit()','ตั้งเพดาน'],
+  ['seccomp','seccomp()','ติดตัวกรอง'], ['execve','execve()','เปลี่ยนเป็นโปรแกรม'], ['run','running','โปรแกรมทำงาน'],
+  ['wait4','wait4()','เก็บผล'], ['verdict','verdict','ตัดสิน'],
+];
+
+/* ================================================================
+ * state + helpers
+ * ================================================================ */
+const S = {speed:1, paused:false, run:0, busy:false, live:false, liveAvail:false, unsafe:false, ex:null, srcOverride:{}};
+const $ = (s, r=document) => r.querySelector(s);
+const el = (tag, cls, txt) => { const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; };
+
+class Cancel extends Error {}
+function tween(ms, fn){
+  const id = S.run;
+  return new Promise((res, rej) => {
+    let t0 = 0, last = performance.now();
+    const tick = now => {
+      if (id !== S.run) return rej(new Cancel());
+      const dt = now - last; last = now;
+      if (!S.paused) t0 += dt * S.speed;
+      const t = ms <= 0 ? 1 : Math.min(1, t0 / ms);
+      try { fn && fn(t); } catch (e) { return rej(e); }
+      t >= 1 ? res() : requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+const sleep = ms => tween(ms);
+const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+const bg = p => p.catch(e => { if (!(e instanceof Cancel)) console.error(e); });
+const flash = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
+
+const fmtMs = v => Math.round(v).toLocaleString() + ' ms';
+const fmtKB = v => v == null ? '—' : v < 1024 ? Math.round(v) + ' KB' : v < 1048576 ? (v/1024).toFixed(v < 10240 ? 1 : 0) + ' MB' : (v/1048576).toFixed(1) + ' GB';
+const fmtOut = v => v < 1 ? Math.round(v*1024) + ' B' : fmtKB(v);
+const fmtPct = v => Math.round(v) + '%';
+
+/* ---------- stepper / narration / log ---------- */
+function buildStepper(){
+  const ol = $('#stepper');
+  STAGES.forEach(([id, sc, th], i) => {
+    const li = el('li'); li.dataset.id = id;
+    li.innerHTML = `<span class="dot"><span>${i+1}</span></span><span class="st"><code>${sc}</code><small>${th}</small></span>`;
+    ol.appendChild(li);
+  });
+}
+function stage(id, st){
+  const li = $(`#stepper li[data-id="${id}"]`);
+  li.classList.remove('active','done','fail','skip');
+  if (st) li.classList.add(st);
+}
+function narrate(step, html){
+  $('#narrStep').textContent = step;
+  $('#narrText').innerHTML = html;
+  flash($('#narr'), 'fade');
+}
+let logN = 0;
+function log(who, text, kind='', hint=''){
+  const ln = el('div', 'ln ' + kind);
+  ln.append(el('span', 'who w-' + who, who), el('span', 'tx', text));
+  if (hint) ln.append(el('span', 'hint', '↳ ' + hint));
+  const L = $('#log'); L.appendChild(ln); L.scrollTop = L.scrollHeight;
+  $('#logCount').textContent = (++logN) + ' บรรทัด';
+  return ln;
+}
+
+/* ---------- meters ---------- */
+const M = {};
+function makeMeter(parent, key, label, max, lim, fmt){
+  const row = el('div', 'meter');
+  row.innerHTML = `<span class="ml">${label}</span><span class="track"><span class="fill"></span><span class="lim"></span></span><span class="mv"></span>`;
+  parent.appendChild(row);
+  M[key] = {val:0, max, lim, row, fill:$('.fill', row), v:$('.mv', row), fmt};
+  if (lim) $('.lim', row).style.left = (lim / max * 100) + '%';
+  setMeter(key, 0);
+}
+function setMeter(k, v){
+  const m = M[k]; m.val = v;
+  m.fill.style.width = Math.min(100, v / m.max * 100) + '%';
+  m.v.textContent = m.fmt(v);
+  m.row.classList.toggle('over', !!m.lim && v >= m.lim);
+}
+function meterTo(k, v, ms){ const a = M[k].val; return tween(ms, t => setMeter(k, a + (v - a) * t)); }
+
+/* ---------- host / world ---------- */
+const HOST0 = {cpu:4, ram:31, disk:42, procs:212};
+const H = {...HOST0};
+function host(p){
+  Object.assign(H, p);
+  setMeter('hcpu', H.cpu); setMeter('hram', H.ram); setMeter('hdisk', H.disk);
+  $('#procs').textContent = Math.round(H.procs).toLocaleString();
+  const bad = H.cpu >= 90 || H.ram >= 90 || H.disk >= 95 || H.procs > 5000;
+  const warn = !bad && (H.cpu >= 25 || H.ram >= 60 || H.disk >= 80);
+  const s = $('#hostState');
+  s.className = 'hs ' + (bad ? 'bad' : warn ? 'warn' : 'ok');
+  s.textContent = bad ? 'วิกฤต' : warn ? 'ทำงานหนัก' : 'ปกติ';
+  $('#hostBox').classList.toggle('danger', bad);
+}
+function netState(text, cls=''){ const n=$('#netState'); n.textContent=text; n.className='rs '+cls; }
+function resetFs(){ const u=$('#fsList'); u.innerHTML=''; const li=el('li','', '/tmp/judge_canary.txt'); li.dataset.f='canary'; u.appendChild(li); }
+function fsMark(f, cls, suffix=''){ const li=$(`#fsList li[data-f="${f}"]`); li.className=cls; li.textContent='/tmp/judge_canary.txt'+suffix; }
+function fsAdd(text, cls){ $('#fsList').appendChild(el('li', cls, text)); }
+
+/* ---------- processes ---------- */
+function setChild(name, pid){ $('#childName').textContent = name; $('#childPid').textContent = pid || ''; }
+function childStatus(t){ $('#childStatus').textContent = t; }
+function childDead(how, killed=true){
+  $('#child').classList.add('dead'); $('#childDot').classList.remove('on');
+  childStatus(killed ? `ถูกฆ่าด้วย ${how}` : `จบการทำงาน ${how}`);
+}
+function parentStatus(t){ $('#parentStatus').textContent = t; }
+function setAlarm(t, ticking=false){ $('#alarmVal').textContent = t; $('#alarm').classList.toggle('ticking', ticking); }
+function stdout(t){ const p=$('#stdout'); p.textContent += t; const lines=p.textContent.split('\n'); if(lines.length>6) p.textContent=lines.slice(-6).join('\n'); }
+
+/* ---------- geometry + packets ---------- */
+function R(node){
+  const s = $('#stage').getBoundingClientRect(), r = node.getBoundingClientRect();
+  return {x:r.left - s.left + r.width/2, y:r.top - s.top + r.height/2, t:r.top - s.top, b:r.bottom - s.top};
+}
+const place = (n, x, y) => { n.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%)`; };
+const kpt = node => ({x:R(node).x, y:R($('#kernel')).y});   // จุดบน kernel ใต้ node
+
+/* syscall เดินทางจาก process ลงไปหา kernel (ผ่านด่าน seccomp) */
+async function sys(name, o={}){
+  const ok = o.ok !== false || S.unsafe;
+  let ln = null;
+  if (!o.fast) ln = log('prog', `${name}(${o.args ?? ''})`, ok ? (o.warn ? 'warn' : '') : 'bad', o.hint || '');
+  const p = el('div', 'pkt' + (o.warn ? ' warnp' : ''), name + '()');
+  $('#fx').appendChild(p);
+  const c = R($('#child')), k = R($('#kernel')), f = R($('#filter'));
+  const x = c.x + (o.dx || 0), y0 = c.b - 14, y1 = ok ? k.y : f.y;
+  place(p, x, y0);
+  await tween(o.fast ? 420 : 700, t => place(p, x, y0 + (y1 - y0) * ease(t)));
+  if (ok) {
+    flash($('#kernel'), 'k-hit');
+    if (ln) $('.tx', ln).textContent += ` = ${o.ret ?? 0}`;
+    await sleep(o.fast ? 60 : 200);
+  } else {
+    p.classList.add('blocked'); p.textContent = name + '() ✗';
+    flash($('#filter'), 'f-hit');
+    $('#kernelMsg').textContent = `seccomp: ${name} ไม่อยู่ใน whitelist`;
+    log('kernel', `seccomp: ${name} ไม่อยู่ใน whitelist → SCMP_ACT_KILL_PROCESS`, 'sv');
+    await sleep(900);
+  }
+  await tween(o.fast ? 120 : 220, t => { p.style.opacity = 1 - t; });
+  p.remove();
+  return ok;
+}
+/* signal / ข้อมูล เดินทางจากจุด a ไป b */
+async function fly(label, a, b, kind='', target=null){
+  const p = el('div', 'sigp ' + kind, label); $('#fx').appendChild(p);
+  place(p, a.x, a.y);
+  await tween(700, t => place(p, a.x + (b.x - a.x) * ease(t), a.y + (b.y - a.y) * ease(t)));
+  if (target) flash(target, target.classList.contains('box') && kind === 'bad' ? 'hit' : 'got-sig');
+  await sleep(220);
+  await tween(180, t => { p.style.opacity = 1 - t; });
+  p.remove();
+}
+const toChild = (sig, kind='') => {
+  $('#kernelMsg').textContent = `ส่ง ${sig} → pid 4242`;
+  return fly(sig, kpt($('#child')), R($('#child')), kind, $('#child'));
+};
+
+/* ================================================================
+ * ขั้นตอนร่วม (ทุกตัวอย่างผ่านเหมือนกัน)
+ * ================================================================ */
+async function stCompile(ex){
+  stage('compile', 'active');
+  if (ex.id === 'compile_bomb') {
+    narrate('1 · Compile', 'บรรทัด <code>#include "/dev/urandom"</code> ทำให้ gcc อ่านไฟล์ที่<b>ไม่มีวันจบ</b> และกินหน่วยความจำไปเรื่อย ๆ — ขั้น compile ก็ต้องมีกรงเหมือนกัน');
+    log('parent', 'fork() → execve("gcc", "-O2 -static -o prog submission.c")');
+    await sleep(700);
+    log('gcc', 'cc1: กำลังอ่าน /dev/urandom …', 'warn');
+    if (S.unsafe) {
+      await tween(3200, t => host({ram: 31 + t*68, cpu: 4 + t*25}));
+      stage('compile', 'fail');
+      await danger({title:'Compiler กิน RAM ทั้งเครื่อง', why:'ขั้น compile ไม่มีเพดาน — gcc อ่าน /dev/urandom ไปเรื่อย ๆ จน RAM เต็ม เครื่องทั้งเครื่องช้าลงจนแทบใช้งานไม่ได้'});
+      return true;
+    }
+    await tween(1600, t => host({ram: 31 + t*6, cpu: 4 + t*25}));
+    log('kernel', 'gcc ชน RLIMIT_AS ของขั้น compile → malloc ล้มเหลว', 'warn');
+    log('gcc', 'cc1: out of memory allocating 65536 bytes', 'bad');
+    host({ram:31, cpu:4});
+    log('parent', 'wait4(gcc) → exit 1 → Compile Error', 'bad');
+    stage('compile', 'fail'); stage('verdict', 'fail');
+    narrate('ตัดสิน', 'gcc ถูกจำกัดหน่วยความจำจนหยุดเอง → <b>CE</b> · ไม่มี process ลูกของโปรแกรมถูกสร้างเลย');
+    showVerdict('CE', {why:'gcc ล้มเพราะชนเพดานหน่วยความจำ — ไม่ปล่อยให้กินทั้งเครื่อง', guard:ex.guard});
+    hostOk();
+    return true;
+  }
+  narrate('1 · Compile', 'judge เรียก <code>gcc</code> ใน process แยก (fork + execve) พร้อมเพดานเวลาและหน่วยความจำ ใช้ <code>-static</code> เพื่อให้โปรแกรมเรียก syscall น้อยลง');
+  log('parent', 'fork() → execve("gcc", "-O2 -static -o prog submission.c")');
+  await sleep(1000);
+  log('gcc', 'compile สำเร็จ → ./prog', 'ok');
+  stage('compile', 'done');
+  return false;
+}
+
+async function stFork(){
+  stage('fork', 'active');
+  narrate('2 · fork()', 'judge แตกตัวเป็น 2 process — <b>parent</b> คือ judge ที่คอยเฝ้า ส่วน <b>child</b> คือสำเนาที่กำลังจะกลายเป็นโปรแกรมของนักศึกษา');
+  log('parent', 'fork() = 4242', '', 'ได้ process ลูก pid 4242');
+  $('#forkLink').classList.add('on');
+  const cage = $('#cage'); cage.classList.add('alive');
+  if (S.unsafe) { cage.classList.add('unsafe'); $('#cageLabel').textContent = 'ไม่มี SANDBOX'; }
+  setChild('judge (สำเนา)', 'pid 4242'); $('#childDot').classList.add('on');
+  childStatus('เพิ่งเกิดจาก fork()');
+  host({procs: H.procs + 1});
+  await sleep(1000);
+  log('child', 'dup2(open("1.in"), 0) · dup2(open("1.out"), 1) · chdir(work_dir)', '', 'ต่อ stdin/stdout เข้ากับไฟล์ test case');
+  await sleep(900);
+  stage('fork', 'done');
+}
+
+async function stLimits(){
+  if (S.unsafe) {
+    stage('setrlimit', 'skip');
+    narrate('3 · setrlimit() — ข้าม', 'โหมด<b>ไม่มี sandbox</b>: ไม่ตั้งเพดานใด ๆ โปรแกรมใช้ CPU / RAM / ดิสก์ได้ไม่จำกัด');
+    log('child', '(ไม่เรียก setrlimit)', 'bad');
+    await sleep(1100); return;
+  }
+  stage('setrlimit', 'active');
+  narrate('3 · setrlimit()', 'ตั้ง<b>เพดาน</b>ให้ process ลูก — ถ้าเกินเมื่อไร <b>kernel จัดการเอง</b> (ส่ง signal หรือปฏิเสธคำขอ) judge ไม่ต้องคอยนับ');
+  $('#cage').classList.add('caged');
+  const L = [['RLIMIT_CPU','1 s','CPU ≤ 1 s'],['RLIMIT_AS','256 MB','MEM ≤ 256 MB'],['RLIMIT_FSIZE','1 MB','OUT ≤ 1 MB'],['RLIMIT_STACK','8 MB','STACK ≤ 8 MB'],['RLIMIT_NPROC','1','NPROC ≤ 1']];
+  for (const [r, v, c] of L) { log('child', `setrlimit(${r}, ${v})`); $('#chips').appendChild(el('span', 'chip', c)); await sleep(420); }
+  await sleep(400);
+  stage('setrlimit', 'done');
+}
+
+async function stSeccomp(){
+  if (S.unsafe) {
+    stage('seccomp', 'skip');
+    narrate('4 · seccomp() — ข้าม', 'ไม่มีด่านตรวจ syscall — โปรแกรมเรียก <b>ทุก syscall</b> ได้เหมือนโปรแกรมปกติบนเครื่อง (เปิดเน็ต, ลบไฟล์, สร้าง process)');
+    log('child', '(ไม่ติดตั้ง seccomp)', 'bad');
+    await sleep(1200); return;
+  }
+  stage('seccomp', 'active');
+  narrate('4 · seccomp()', 'ติดตั้ง<b>ด่านตรวจ syscall</b>ไว้ใน kernel — จากนี้ทุก syscall ต้องอยู่ใน <b>whitelist</b> ไม่งั้น kernel ฆ่าทันทีด้วย <code>SIGSYS</code> และติดแล้ว<b>ถอดไม่ได้</b>');
+  log('child', 'prctl(PR_SET_NO_NEW_PRIVS, 1)', '', 'ห้ามยกระดับสิทธิ์ — จำเป็นก่อนโหลด seccomp');
+  await sleep(800);
+  log('child', 'seccomp_load(whitelist: read write mmap brk exit_group … 23 ตัว)');
+  $('#filter').classList.add('on');
+  await sleep(1300);
+  stage('seccomp', 'done');
+}
+
+async function stExecve(){
+  stage('execve', 'active');
+  narrate('5 · execve()', 'แทนที่โค้ดของ child ด้วยโปรแกรมนักศึกษา — แต่<b>เพดานและตัวกรองติดตัวไปด้วย</b> นี่คือเหตุผลที่ต้องตั้งทุกอย่าง<i>ก่อน</i> execve');
+  await sys('execve', {args:'"./prog", argv, envp', ret:'0', hint: S.unsafe ? '' : 'อนุญาตเฉพาะ path ./prog เท่านั้น'});
+  setChild('prog (โค้ดนักศึกษา)', 'pid 4242');
+  flash($('#child'), 'got-sig');
+  childStatus('เริ่มทำงาน');
+  if (!S.unsafe) { log('parent', 'alarm(2)', '', 'ตั้งนาฬิกาเวลาจริง 2 วินาที กันโปรแกรมที่ไม่ใช้ CPU แต่ไม่ยอมจบ'); setAlarm('2.0 s'); }
+  parentStatus('wait4() — รอลูก');
+  await sleep(700);
+  stage('execve', 'done');
+}
+
+async function stWait4(o){
+  stage('wait4', 'active');
+  narrate('7 · wait4()', 'parent ตื่นจาก <code>wait4()</code> ได้ทั้ง "ลูกจบอย่างไร" (exit code / signal) และ <code>rusage</code> (เวลา CPU, หน่วยความจำสูงสุด) ในคำสั่งเดียว');
+  await fly('status + rusage', R($('#child')), R($('#parentBox')), 'info', $('#parentBox'));
+  log('parent', `wait4(4242) → ${o.sig ? 'WIFSIGNALED, sig = ' + o.sig : 'WIFEXITED, exit = ' + (o.exit ?? 0)}`);
+  log('parent', `rusage: utime+stime = ${fmtMs(o.time ?? 0)} · maxrss = ${fmtKB(o.mem)}`);
+  if (!S.unsafe) { log('parent', 'alarm(0)', '', 'ยกเลิกนาฬิกา'); setAlarm('—'); }
+  parentStatus('ได้ผลแล้ว');
+  host({procs: H.procs - 1});
+  $('#kernelMsg').textContent = 'รับ syscall · ส่ง signal · บังคับ limit';
+  await sleep(900);
+  stage('wait4', 'done');
+}
+
+/* ---------- ผลลัพธ์ ---------- */
+function addRow(i, v, time, mem){
+  const tb = $('#tests');
+  if (tb.querySelector('.empty')) tb.innerHTML = '';
+  const tr = el('tr');
+  tr.innerHTML = `<td>#${i}</td><td><span class="vchip" data-v="${v}">${v}</span></td><td class="num">${fmtMs(time)}</td><td class="num">${fmtKB(mem)}</td>`;
+  tb.appendChild(tr);
+}
+function showChecker(exp, act){
+  const c = $('#checker'); c.hidden = false;
+  $('#chkExp').textContent = exp; $('#chkAct').textContent = act;
+  c.className = 'checker ' + (exp === act ? 'match' : 'diff');
+}
+function showVerdict(v, o={}){
+  const c = $('#vcard');
+  c.dataset.v = v; flash(c, 'popin');
+  $('#vBadge').textContent = v === 'DANGER' ? '!' : v;
+  $('#vName').textContent = v === 'DANGER' ? o.title : `${VN[v]} — ${VT[v]}`;
+  $('#vWhy').textContent = o.why || '';
+  const g = $('#vGuard');
+  g.hidden = !o.guard;
+  g.textContent = o.guard ? (v === 'DANGER' ? 'sandbox จะกันด้วย: ' : 'ป้องกันด้วย: ') + o.guard : '';
+  $('#vStats').textContent = o.time != null ? `เวลา CPU ${fmtMs(o.time)} · หน่วยความจำ ${fmtKB(o.mem)}` + (o.live ? ' · ผลจาก ./judge จริง' : ' · (ค่าจำลอง)') : '';
+  const e = $('#vErr'); e.hidden = !o.stderr; e.textContent = o.stderr || '';
+}
+function hostOk(){
+  if (!S.ex || S.unsafe || !['res','atk'].includes(S.ex.g) && S.ex.id !== 'compile_bomb') return;
+  log('judge', 'เครื่อง host ปกติดี — ไม่มีไฟล์หาย ไม่มี process ค้าง ✓', 'ok');
+}
+async function danger(o){
+  stage('verdict', 'fail');
+  narrate('ถ้าไม่มี sandbox', `<b style="color:var(--bad)">${o.title}</b> — ${o.why}`);
+  log('judge', o.title, 'bad');
+  showVerdict('DANGER', {title:o.title, why:o.why, guard:S.ex.guard});
+}
+
+async function stJudge(o){
+  const ex = S.ex;
+  stage('verdict', 'active');
+  let v = o.v;
+  if (!v) {                                   // จบปกติ → ต้องเทียบ output
+    const exp = String(TESTS[0].a + TESTS[0].b);
+    narrate('8 · Checker', 'exit 0 แปลว่าโปรแกรม<b>จบปกติ</b> แต่ยังไม่รู้ว่าตอบถูกไหม — checker เทียบ stdout กับไฟล์เฉลย <code>1.out</code>');
+    showChecker(exp, o.out);
+    await sleep(1400);
+    v = o.out === exp ? 'AC' : 'WA';
+  }
+  addRow(1, v, o.time, o.mem);
+  if (v === 'AC') {
+    narrate('8 · เคสที่เหลือ', 'เคส 1 ผ่าน → รันเคสถัดไปด้วยขั้นตอนเดิมทุกอย่าง (fork ใหม่ ในกรงใหม่ ทุกเคส)');
+    for (let i = 1; i < TESTS.length; i++) {
+      await sleep(650);
+      const {a, b} = TESTS[i];
+      const got = String(ex.answer(a, b)), want = String(a + b);
+      const tv = got === want ? 'AC' : 'WA';
+      log('judge', `test ${i+1}: fork → setrlimit → seccomp → execve → wait4 → ${tv}`, tv === 'AC' ? 'ok' : 'bad');
+      addRow(i + 1, tv, 1, 812);
+    }
+  } else if (o.exit === 0) {
+    log('judge', 'หยุดที่เคสแรกที่ไม่ผ่าน (stop on fail)');
+  }
+  stage('verdict', v === 'AC' ? 'done' : 'fail');
+  const why = v === 'AC' ? 'ผ่านทุก test case' : v === 'WA' ? `ตอบ ${o.out} แต่เฉลยคือ ${TESTS[0].a + TESTS[0].b}` : o.why;
+  const extra = S.unsafe && !ex.unsafe ? ' · ตัวอย่างนี้ไม่อันตราย ผลจึงเหมือนมี sandbox ลองกลุ่ม "กินทรัพยากร" หรือ "โจมตีระบบ" ดู' : '';
+  narrate('ตัดสิน', (o.sig ? `<code>${o.sig}</code> → ` : '') + `<b>${v}</b> — ${why}${extra}`);
+  showVerdict(v, {why, guard:o.guard, time:o.time, mem:o.mem});
+  hostOk();
+}
+
+/* ================================================================
+ * เนื้อหาช่วง "โปรแกรมทำงาน" ของแต่ละตัวอย่าง
+ * คืนค่า {exit | sig, v?, time, mem, why, guard}  หรือ {danger:true, title, why}
+ * ================================================================ */
+const B = {};
+B.aplusb = correct => async () => {
+  const {a, b} = TESTS[0]; const ans = String(correct ? a + b : a - b);
+  narrate('6 · Running', 'โปรแกรมอ่าน input จาก stdin (ถูก dup2 มาจากไฟล์ <code>1.in</code>) แล้วเขียนคำตอบออก stdout' + (S.unsafe ? '' : ' — ทุก syscall ผ่านด่านเพราะอยู่ใน whitelist'));
+  childStatus('running');
+  await sys('read', {args:`0, "${a} ${b}\\n", 4096`, ret:String(`${a} ${b}`.length + 1)});
+  setMeter('cpu', 1); setMeter('mem', 812);
+  await sys('write', {args:`1, "${ans}\\n", ${ans.length + 1}`, ret:String(ans.length + 1)});
+  stdout(ans + '\n'); setMeter('out', (ans.length + 1) / 1024);
+  await sys('exit_group', {args:'0', ret:'—'});
+  childDead('exit(0)', false);
+  return {exit:0, out:ans, time:1, mem:812};
+};
+B.aplusb_correct = B.aplusb(true);
+B.aplusb_wrong = B.aplusb(false);
+
+B.infinite_loop = async () => {
+  narrate('6 · Running', '<code>while(1)</code> ไม่เรียก syscall เลย จึง<b>ไม่ผ่านด่าน seccomp</b> — แต่เผา CPU ไปเรื่อย ๆ จนนาฬิกา CPU ชนเพดาน <code>RLIMIT_CPU</code>');
+  childStatus('running · CPU 100%'); host({cpu:29});
+  await meterTo('cpu', 1000, 2800);
+  log('kernel', 'CPU time ครบ RLIMIT_CPU (1 s) → ส่ง SIGXCPU', 'warn');
+  await toChild('SIGXCPU');
+  childDead('SIGXCPU'); host({cpu:4});
+  return {v:'TLE', sig:'SIGXCPU', time:1000, mem:780, why:'ใช้ CPU ครบ 1000 ms', guard:'setrlimit(RLIMIT_CPU)'};
+};
+B.infinite_loop.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี <code>RLIMIT_CPU</code> — ไม่มีใครหยุดมัน');
+  childStatus('running · CPU 100%'); host({cpu:29});
+  await meterTo('cpu', 9000, 4000);
+  parentStatus('wait4() … ยังรออยู่');
+  childStatus('running · ไม่มีวันจบ');
+  return {danger:true, title:'Judge ค้างตลอดไป', why:'โปรแกรมไม่มีวันจบ และไม่มีเพดาน CPU มาหยุด — parent รอ wait4() ไม่มีที่สิ้นสุด งานตรวจของนักศึกษาทุกคนในคิวค้างตาม'};
+};
+
+B.sleep_forever = async () => {
+  narrate('6 · Running', '<code>sleep(100)</code> — process หลับ <b>ไม่ใช้ CPU เลย</b> RLIMIT_CPU จึงช่วยไม่ได้ ต้องพึ่งนาฬิกาเวลาจริงของ parent: <code>alarm()</code>');
+  await sys('clock_nanosleep', {args:'100 s', ret:'(ยังไม่กลับ…)'});
+  childStatus('sleeping · CPU 0%');
+  await tween(2400, t => setAlarm((2 * (1 - t)).toFixed(1) + ' s', true));
+  setAlarm('0.0 s', true);
+  log('kernel', 'ครบ 2 วินาที → ส่ง SIGALRM ให้ parent', 'warn');
+  await fly('SIGALRM', kpt($('#parentBox')), R($('#parentBox')), '', $('#parentBox'));
+  log('parent', 'SIGALRM handler → kill(-4242, SIGKILL)', 'warn', 'ฆ่าทั้ง process group ของลูก');
+  await fly('SIGKILL', R($('#parentBox')), R($('#child')), 'bad', $('#child'));
+  childDead('SIGKILL');
+  return {v:'TLE', sig:'SIGKILL', time:0, mem:700, why:'เวลาจริงเกิน 2 วินาที (wall time) ทั้งที่ใช้ CPU 0 ms', guard:'alarm() + kill()'};
+};
+B.sleep_forever.unsafe = async () => {
+  narrate('6 · Running', '<code>sleep(100)</code> — ไม่มี alarm คอยจับเวลา');
+  await sys('clock_nanosleep', {args:'100 s', ret:'(ยังไม่กลับ…)'});
+  childStatus('sleeping · CPU 0%');
+  await tween(3500, t => parentStatus(`wait4() … รอมา ${Math.round(t * 100)} s`));
+  return {danger:true, title:'Judge รอเปล่า ๆ', why:'ไม่มี alarm — judge รอจนกว่าโปรแกรมจะตื่นเอง ถ้าเป็น sleep(1e9) ก็รอไปตลอดกาล และเพราะ CPU time = 0 ตัว RLIMIT_CPU ก็มองไม่เห็นปัญหานี้'};
+};
+
+async function spray(name, n, gap){
+  for (let i = 0; i < n; i++) { bg(sys(name, {fast:true, dx:((i % 5) - 2) * 36})); await sleep(gap); }
+}
+B.memory_hog = async () => {
+  narrate('6 · Running', '<code>malloc</code> วนไม่หยุด — ทุกครั้ง glibc เรียก <code>mmap</code> ขอหน่วยความจำจาก kernel (อนุญาต) จนชนเพดาน <code>RLIMIT_AS</code>');
+  childStatus('allocating…');
+  log('prog', 'mmap(NULL, 1 MB, …) × หลายร้อยครั้ง');
+  await Promise.all([meterTo('mem', LIM.mem, 2800), spray('mmap', 10, 270), tween(2800, t => host({ram:31 + t*3}))]);
+  await sys('mmap', {args:'NULL, 1 MB', ret:'-ENOMEM', warn:true, hint:'kernel ปฏิเสธ เพราะชน RLIMIT_AS'});
+  log('prog', 'malloc() คืน NULL → memset(NULL, …)', 'warn');
+  log('kernel', 'page fault ที่ address 0x0 → SIGSEGV', 'warn');
+  await toChild('SIGSEGV');
+  childDead('SIGSEGV'); host({ram:31});
+  return {v:'MLE', sig:'SIGSEGV', time:180, mem:LIM.mem, why:'ru_maxrss ≈ 256 MB ชนเพดาน — แม้ตายด้วย SIGSEGV judge ดู rusage แล้วตัดสินว่า MLE', guard:'setrlimit(RLIMIT_AS) + ru_maxrss'};
+};
+B.memory_hog.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี <code>RLIMIT_AS</code> — ขอหน่วยความจำได้เรื่อย ๆ จนหมดเครื่อง');
+  childStatus('allocating…');
+  log('prog', 'mmap(NULL, 1 MB, …) × หลายหมื่นครั้ง');
+  await Promise.all([meterTo('mem', 15.6 * 1048576, 3800), spray('mmap', 14, 270), tween(3800, t => host({ram:31 + t*68}))]);
+  childStatus('ยังขอเพิ่มอยู่…');
+  return {danger:true, title:'RAM เต็มทั้งเครื่อง', why:'โปรแกรมกิน RAM ทั้งเครื่อง → เครื่อง swap ช้าลงทุกโปรแกรม จน OOM killer สุ่มฆ่า process (อาจโดนตัว judge หรือ database เอง)'};
+};
+
+B.output_flood = async () => {
+  narrate('6 · Running', '<code>puts</code> วนไม่หยุด — <code>write</code> อยู่ใน whitelist จึงผ่านด่าน แต่ไฟล์ output โตจนชนเพดาน <code>RLIMIT_FSIZE</code>');
+  childStatus('writing…');
+  log('prog', 'write(1, "AAAA…", 65) × หลายหมื่นครั้ง');
+  const lines = (async () => { for (let i = 0; i < 14; i++) { stdout('A'.repeat(64) + '\n'); await sleep(190); } })();
+  await Promise.all([meterTo('out', LIM.out, 2700), spray('write', 10, 260), lines]);
+  log('kernel', 'ไฟล์ output ถึง RLIMIT_FSIZE (1 MB) → ส่ง SIGXFSZ', 'warn');
+  await toChild('SIGXFSZ');
+  childDead('SIGXFSZ');
+  return {v:'OLE', sig:'SIGXFSZ', time:38, mem:792, why:'เขียน output เกิน 1 MB', guard:'setrlimit(RLIMIT_FSIZE)'};
+};
+B.output_flood.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี <code>RLIMIT_FSIZE</code> — เขียนได้จนดิสก์เต็ม');
+  childStatus('writing…');
+  log('prog', 'write(1, "AAAA…", 65) × หลายล้านครั้ง');
+  const lines = (async () => { for (let i = 0; i < 18; i++) { stdout('A'.repeat(64) + '\n'); await sleep(200); } })();
+  await Promise.all([meterTo('out', 48 * 1048576, 3800), spray('write', 14, 260), lines, tween(3800, t => host({disk:42 + t*58}))]);
+  return {danger:true, title:'ดิสก์เต็ม', why:'ไฟล์ output โตจนดิสก์เต็ม — ระบบ log, database และโปรแกรมอื่นที่ต้องเขียนไฟล์พังตามกันหมด'};
+};
+
+B.fork_bomb = async () => {
+  narrate('6 · Running', '<code>fork()</code> — glibc เรียก syscall <code>clone</code> เพื่อสร้าง process ใหม่ ซึ่ง<b>ไม่อยู่ใน whitelist</b>');
+  childStatus('running');
+  await sys('clone', {ok:false, args:'SIGCHLD'});
+  await toChild('SIGSYS', 'sv');
+  childDead('SIGSYS');
+  log('judge', 'จำนวน process บนเครื่องไม่เพิ่มเลย ✓', 'ok');
+  return {v:'SV', sig:'SIGSYS', time:0, mem:720, why:'เรียก clone() ซึ่งไม่อยู่ใน whitelist', guard:'seccomp (สำรองด้วย RLIMIT_NPROC)'};
+};
+B.fork_bomb.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี seccomp และ RLIMIT_NPROC — process ใหม่ทุกตัวก็ fork ต่อ จำนวนจึง<b>เพิ่มเป็นเท่าตัว</b> (ไฟล์ตัวอย่างจำกัดไว้ 64 ครั้ง แต่ fork bomb จริงคือ <code>while(1) fork();</code>)');
+  childStatus('forking…');
+  log('prog', 'clone(…) × ไม่รู้จบ');
+  const p0 = H.procs;
+  await Promise.all([spray('clone', 14, 250), tween(3800, t => host({procs:p0 + Math.pow(2, t*15), cpu:4 + t*96, ram:31 + t*55}))]);
+  return {danger:true, title:'Process เต็มตาราง — เครื่องค้าง', why:'process ถูกสร้างเป็นเท่าตัวจนเต็ม pid_max — เปิด terminal ใหม่ไม่ได้ แม้แต่คำสั่ง kill ก็รันไม่ได้ ต้องกดรีสตาร์ทเครื่อง'};
+};
+
+B.open_socket = async () => {
+  narrate('6 · Running', 'โปรแกรมพยายามเปิด <code>socket</code> เพื่อต่ออินเทอร์เน็ต — ไม่อยู่ใน whitelist');
+  childStatus('running');
+  await sys('socket', {ok:false, args:'AF_INET, SOCK_STREAM, 0'});
+  await toChild('SIGSYS', 'sv');
+  childDead('SIGSYS');
+  netState('ไม่มีการเชื่อมต่อ ✓', 'ok');
+  return {v:'SV', sig:'SIGSYS', time:0, mem:730, why:'เรียก socket() ซึ่งไม่อยู่ใน whitelist', guard:'seccomp'};
+};
+B.open_socket.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี seccomp — เปิด socket และเชื่อมต่อออกไปนอกเครื่องได้ทันที');
+  childStatus('running');
+  await sys('socket', {args:'AF_INET, SOCK_STREAM, 0', ret:'3'});
+  await sys('connect', {args:'3, 1.1.1.1:80', ret:'0'});
+  await fly('TCP → 1.1.1.1:80', kpt($('#netBox')), R($('#netBox')), 'bad', $('#netBox'));
+  netState('เชื่อมต่อ 1.1.1.1:80 แล้ว!', 'bad');
+  return {danger:true, title:'ข้อมูลรั่วออกนอกเครื่อง', why:'โค้ดต่อเน็ตได้ — ส่งไฟล์เฉลยและ test case ออกไป, โหลด malware เข้ามา หรือใช้เครื่อง judge ยิงเว็บคนอื่น'};
+};
+
+B.delete_file = async () => {
+  narrate('6 · Running', 'โปรแกรมพยายาม <code>unlink</code> ไฟล์ของเครื่อง — ไม่อยู่ใน whitelist');
+  childStatus('running');
+  await sys('unlink', {ok:false, args:'"/tmp/judge_canary.txt"'});
+  await toChild('SIGSYS', 'sv');
+  childDead('SIGSYS');
+  fsMark('canary', 'ok', ' — ยังอยู่ ✓');
+  return {v:'SV', sig:'SIGSYS', time:0, mem:710, why:'เรียก unlink() ซึ่งไม่อยู่ใน whitelist', guard:'seccomp'};
+};
+B.delete_file.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี seccomp — <code>unlink</code> ทำงานด้วยสิทธิ์เดียวกับ judge');
+  childStatus('running');
+  await sys('unlink', {args:'"/tmp/judge_canary.txt"', ret:'0'});
+  await fly('unlink', kpt($('#fsBox')), R($('#fsBox')), 'bad', $('#fsBox'));
+  fsMark('canary', 'gone', '');
+  fsAdd('↑ ถูกลบแล้ว!', 'bad');
+  return {danger:true, title:'ไฟล์ในเครื่องถูกลบ', why:'ถ้าเป็นไฟล์เฉลย, database หรือ home ของผู้ดูแล ก็หายไปทันที กู้คืนไม่ได้'};
+};
+
+B.system_call_shell = async () => {
+  narrate('6 · Running', '<code>system()</code> ต้องสร้าง process ใหม่ (<code>clone3</code>) แล้ว <code>execve("/bin/sh")</code> — แต่ด่านแรกก็ไม่ผ่านแล้ว');
+  childStatus('running');
+  await sys('clone3', {ok:false, args:'{flags: CLONE_VM|CLONE_VFORK}'});
+  await toChild('SIGSYS', 'sv');
+  childDead('SIGSYS');
+  fsAdd('/tmp/judge_pwned — ไม่ถูกสร้าง ✓', 'ok');
+  return {v:'SV', sig:'SIGSYS', time:0, mem:740, why:'เรียก clone3() เพื่อเปิด shell ซึ่งไม่อยู่ใน whitelist', guard:'seccomp (execve ได้แค่ ./prog)'};
+};
+B.system_call_shell.unsafe = async () => {
+  narrate('6 · Running', 'ไม่มี seccomp — <code>system()</code> เปิด <code>/bin/sh</code> แล้วรันคำสั่งอะไรก็ได้');
+  childStatus('running');
+  await sys('clone3', {args:'{flags: CLONE_VM|CLONE_VFORK}', ret:'4243'});
+  host({procs:H.procs + 1});
+  await sys('execve', {args:'"/bin/sh", "-c", "touch /tmp/judge_pwned"', ret:'0'});
+  await fly('/bin/sh', kpt($('#fsBox')), R($('#fsBox')), 'bad', $('#fsBox'));
+  fsAdd('/tmp/judge_pwned — ถูกสร้าง!', 'bad');
+  return {danger:true, title:'รันคำสั่ง shell ได้', why:'เรียก shell ได้ = ทำอะไรก็ได้ในนามของ judge เช่น rm -rf ~, อ่านไฟล์เฉลย, ติดตั้ง backdoor'};
+};
+
+B.stack_overflow = async () => {
+  narrate('6 · Running', 'ฟังก์ชันเรียกตัวเองไม่จบ — ทุกชั้นกิน stack 1 KB จน stack ชนเพดาน' + (S.unsafe ? ' (OS มี stack limit เริ่มต้น 8 MB อยู่แล้ว ผลจึงคล้ายเดิม)' : ' <code>RLIMIT_STACK</code>'));
+  await Promise.all([meterTo('mem', 8192 + 760, 2000), tween(2000, t => childStatus('recursing · depth ' + Math.round(t * 8000).toLocaleString()))]);
+  log('kernel', 'stack ชน guard page → page fault → SIGSEGV', 'warn');
+  await toChild('SIGSEGV');
+  childDead('SIGSEGV');
+  return {v:'RE', sig:'SIGSEGV', time:12, mem:8952, why:'stack overflow → SIGSEGV', guard:'setrlimit(RLIMIT_STACK)'};
+};
+B.divide_zero = async () => {
+  narrate('6 · Running', '<code>1 / 0</code> — CPU เกิด exception แล้ว kernel แปลงเป็น signal <code>SIGFPE</code> ส่งให้โปรแกรม');
+  childStatus('running'); await sleep(700);
+  log('kernel', 'CPU exception: divide error (#DE) → SIGFPE', 'warn'); flash($('#kernel'), 'k-hit');
+  await toChild('SIGFPE');
+  childDead('SIGFPE');
+  return {v:'RE', sig:'SIGFPE', time:0, mem:760, why:'หารด้วยศูนย์ → SIGFPE'};
+};
+B.segfault = async () => {
+  narrate('6 · Running', 'เขียนค่าลง address 0 — ไม่มีหน้าหน่วยความจำนั้น kernel จึงส่ง <code>SIGSEGV</code>');
+  childStatus('running'); await sleep(700);
+  log('kernel', 'page fault ที่ address 0x0 → SIGSEGV', 'warn'); flash($('#kernel'), 'k-hit');
+  await toChild('SIGSEGV');
+  childDead('SIGSEGV');
+  return {v:'RE', sig:'SIGSEGV', time:0, mem:740, why:'เข้าถึงหน่วยความจำที่ไม่ได้รับอนุญาต → SIGSEGV'};
+};
+
+/* ================================================================
+ * โหมดจำลอง
+ * ================================================================ */
+async function runSim(){
+  const ex = S.ex;
+  if (await stCompile(ex)) return;
+  await stFork(); await stLimits(); await stSeccomp(); await stExecve();
+  stage('run', 'active');
+  const body = B[ex.id];
+  const o = await ((S.unsafe && body.unsafe) ? body.unsafe() : body());
+  if (o.danger) { stage('run', 'fail'); await danger(o); return; }
+  stage('run', 'done');
+  await stWait4(o);
+  await stJudge(o);
+}
+
+/* ================================================================
+ * โหมด Live — เรียก ./judge จริงผ่าน web/server.py
+ * ================================================================ */
+async function apiJudge(source){
+  const r = await fetch('/api/judge', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source, problem:'aplusb'})});
+  const j = await r.json().catch(() => ({error:'server ตอบกลับไม่ใช่ JSON'}));
+  if (!r.ok || j.error) { const e = new Error(j.error || ('HTTP ' + r.status)); e.stderr = j.stderr; throw e; }
+  return j;
+}
+async function genericBody(r){
+  narrate('6 · Running', 'แสดงภาพตามผลจริงที่ <code>./judge</code> รายงาน');
+  childStatus('running');
+  switch (r.verdict) {
+    case 'AC': case 'WA':
+      await sys('read', {args:'0, …'}); await sys('write', {args:'1, …'}); await sys('exit_group', {args:'0', ret:'—'});
+      childDead('exit(0)', false);
+      return {exit:0, why: r.verdict === 'AC' ? 'ผ่านทุก test case' : 'output ไม่ตรงกับเฉลย'};
+    case 'TLE':
+      await meterTo('cpu', Math.min(r.time_ms, LIM.time), 2000); await toChild('SIGXCPU / SIGKILL'); childDead('SIGXCPU / SIGKILL');
+      return {sig:'SIGXCPU / SIGKILL', why:'เกินเวลาที่กำหนด', guard:'RLIMIT_CPU + alarm()'};
+    case 'MLE':
+      await meterTo('mem', r.memory_kb, 2000); await toChild('signal'); childDead('signal');
+      return {sig:'(signal)', why:'ใช้หน่วยความจำเกินเพดาน', guard:'RLIMIT_AS + ru_maxrss'};
+    case 'OLE':
+      await meterTo('out', LIM.out, 1800); await toChild('SIGXFSZ'); childDead('SIGXFSZ');
+      return {sig:'SIGXFSZ', why:'output เกินเพดาน', guard:'RLIMIT_FSIZE'};
+    case 'SV':
+      await sys('syscall ต้องห้าม', {ok:false}); await toChild('SIGSYS', 'sv'); childDead('SIGSYS');
+      return {sig:'SIGSYS', why:'เรียก syscall ที่ไม่อยู่ใน whitelist', guard:'seccomp'};
+    default:
+      await sleep(600); await toChild('SIGSEGV / SIGFPE'); childDead('signal');
+      return {sig:'(signal)', why:'โปรแกรมพังระหว่างรัน'};
+  }
+}
+async function runLive(){
+  const ex = S.ex, src = $('#code').value, id = S.run;
+  stage('compile', 'active');
+  narrate('1 · Compile', 'ส่งโค้ดไปให้ <code>./judge</code> ตัวจริงบนเครื่อง แล้วรอผล…');
+  log('web', 'POST /api/judge → ./judge --json');
+  let resp;
+  try { resp = await apiJudge(src); }
+  catch (e) {
+    if (id !== S.run) throw new Cancel();
+    stage('compile', 'fail');
+    narrate('ผิดพลาด', 'เรียก judge ไม่สำเร็จ — ' + e.message);
+    showVerdict('SE', {why:e.message, stderr:e.stderr});
+    return;
+  }
+  if (id !== S.run) throw new Cancel();
+  const r = resp.result;
+  log('web', `ได้ผล: ${r.verdict} · ${fmtMs(r.time_ms)} · ${fmtKB(r.memory_kb)}`, 'ok');
+  if (r.verdict === 'SE') {
+    stage('compile', 'fail');
+    narrate('System Error', 'judge ตอบ <b>SE</b> — น่าจะยังมีโมดูลที่เป็น stub อยู่ (ดู stderr ในกล่องผล)');
+    showVerdict('SE', {why:'judge รายงาน System Error', stderr:resp.stderr, live:true});
+    return;
+  }
+  if (r.verdict === 'CE') {
+    log('gcc', 'compile ไม่ผ่าน', 'bad');
+    stage('compile', 'fail'); stage('verdict', 'fail');
+    narrate('ตัดสิน', 'gcc คืนค่าไม่ใช่ 0 → <b>CE</b>');
+    showVerdict('CE', {why:'คอมไพล์ไม่ผ่าน หรือ compiler ถูกหยุดเพราะชนเพดาน', stderr:resp.stderr, live:true});
+    return;
+  }
+  log('gcc', 'compile สำเร็จ → ./prog', 'ok'); stage('compile', 'done');
+  await stFork(); await stLimits(); await stSeccomp(); await stExecve();
+  stage('run', 'active');
+  const same = ex && src.trim() === exSrc(ex).trim() && ex.exp === r.verdict;
+  let o = same ? await B[ex.id]() : await genericBody(r);
+  o = {...o, time:r.time_ms, mem:r.memory_kb};
+  setMeter('cpu', r.time_ms); setMeter('mem', r.memory_kb);   // แสดงค่าจริงจาก rusage
+  stage('run', 'done');
+  await stWait4(o);
+  stage('verdict', 'active');
+  if (same && o.exit === 0) { showChecker(String(TESTS[0].a + TESTS[0].b), o.out); await sleep(1000); }
+  (r.tests || []).forEach((t, i) => addRow(i + 1, t.verdict, t.time_ms, t.memory_kb));
+  stage('verdict', r.verdict === 'AC' ? 'done' : 'fail');
+  const why = r.verdict === 'AC' ? 'ผ่านทุก test case' : (o.why || VT[r.verdict]);
+  narrate('ตัดสิน (ผลจริง)', `<b>${r.verdict}</b> — ${why}`);
+  showVerdict(r.verdict, {why, guard:o.guard, time:r.time_ms, mem:r.memory_kb, live:true});
+  hostOk();
+}
+
+/* ================================================================
+ * UI
+ * ================================================================ */
+const exSrc = ex => S.srcOverride[ex.id] || ex.src;
+
+function resetView(){
+  S.run++; S.paused = false;
+  $('#fx').innerHTML = ''; $('#log').innerHTML = ''; logN = 0; $('#logCount').textContent = '';
+  $('#stdout').textContent = ''; $('#chips').innerHTML = '';
+  STAGES.forEach(([id]) => stage(id, null));
+  const cage = $('#cage'); cage.className = 'cage'; $('#cageLabel').textContent = 'SANDBOX';
+  $('#filter').className = 'filter'; $('#forkLink').className = 'link';
+  const ch = $('#child'); ch.className = 'child'; $('#childDot').className = 'proc-dot';
+  setChild('ยังไม่มี process ลูก', ''); childStatus('');
+  ['cpu','mem','out'].forEach(k => setMeter(k, 0));
+  host({...HOST0});
+  parentStatus('พร้อม'); setAlarm('—');
+  netState('ไม่มีการเชื่อมต่อ'); resetFs();
+  $('#kernelMsg').textContent = 'รับ syscall · ส่ง signal · บังคับ limit';
+  const vc = $('#vcard'); delete vc.dataset.v; vc.className = 'vcard';
+  $('#vBadge').textContent = '—'; $('#vName').textContent = 'ยังไม่มีผล'; $('#vWhy').textContent = 'ผลตัดสินจะแสดงที่นี่';
+  $('#vGuard').hidden = true; $('#vStats').textContent = ''; $('#vErr').hidden = true;
+  $('#checker').hidden = true;
+  $('#tests').innerHTML = '<tr><td colspan="4" class="empty">ยังไม่ได้รัน</td></tr>';
+  if (S.ex) narrate('พร้อม', `<b>${S.ex.title}</b> — ${S.ex.desc} · คาดหวัง <b>${S.ex.exp}</b>` + (S.unsafe ? ' · <span style="color:var(--bad)">โหมดไม่มี sandbox</span>' : ''));
+  S.busy = false; updateButtons();
+}
+function updateButtons(){
+  $('#runBtn').disabled = S.busy;
+  $('#pauseBtn').disabled = !S.busy;
+  $('#pauseBtn').textContent = S.paused ? '▶ เล่นต่อ' : '⏸ หยุด';
+}
+async function run(){
+  if (!S.ex || S.busy) return;
+  resetView();
+  const id = S.run;
+  S.busy = true; updateButtons();
+  try { await (S.live ? runLive() : runSim()); }
+  catch (e) { if (!(e instanceof Cancel)) { console.error(e); narrate('ผิดพลาด', e.message); } }
+  finally { if (id === S.run) { S.busy = false; updateButtons(); } }
+}
+function selectEx(ex){
+  S.ex = ex;
+  document.querySelectorAll('.ex').forEach(b => b.classList.toggle('sel', b.dataset.id === ex.id));
+  $('#code').value = exSrc(ex);
+  $('#codeTitle').textContent = ex.id + '.c';
+  resetView();
+}
+function buildList(){
+  const box = $('#exList');
+  for (const g of Object.keys(GROUPS)) {
+    box.appendChild(el('div', 'ex-group', GROUPS[g]));
+    for (const ex of EX.filter(e => e.g === g)) {
+      const b = el('button', 'ex'); b.dataset.id = ex.id;
+      b.innerHTML = `<span class="t"><b></b><span></span></span><span class="vchip" data-v="${ex.exp}">${ex.exp}</span>`;
+      $('b', b).textContent = ex.title; $('.t span', b).textContent = ex.id + '.c';
+      b.onclick = () => selectEx(ex);
+      box.appendChild(b);
+    }
+  }
+}
+function setMode(live){
+  S.live = live && S.liveAvail;
+  $('#modeSim').classList.toggle('on', !S.live);
+  $('#modeLive').classList.toggle('on', S.live);
+  const code = $('#code'); code.readOnly = !S.live;
+  $('#codeHint').textContent = S.live ? 'แก้โค้ดได้ แล้วกดรัน' : 'อ่านอย่างเดียว (โหมดจำลอง)';
+  const w = $('#unsafeWrap'), t = $('#unsafeToggle');
+  if (S.live) { t.checked = false; S.unsafe = false; }
+  t.disabled = S.live; w.classList.toggle('disabled', S.live); w.classList.toggle('on', S.unsafe);
+  w.title = S.live ? 'ใช้ได้เฉพาะโหมดจำลอง (ไม่รันโค้ดอันตรายจริงโดยไม่มีกรง)' : 'ดูว่าถ้ารันโค้ดตรง ๆ ไม่มีกรง จะเกิดอะไรขึ้น';
+  if (S.ex) selectEx(S.ex);
+}
+async function detectLive(){
+  if (!location.protocol.startsWith('http')) return;
+  try {
+    const r = await fetch('/api/health', {cache:'no-store'});
+    if (!r.ok) return;
+    const j = await r.json();
+    S.liveAvail = true;
+    const b = $('#modeLive'); b.disabled = false;
+    b.title = j.judge_built ? 'เรียก ./judge ตัวจริง' : 'ยังไม่ได้ build ./judge — รัน make ก่อน';
+    const e = await fetch('/api/examples').then(x => x.json()).catch(() => ({}));
+    for (const [file, src] of Object.entries(e.examples || {})) S.srcOverride[file.replace(/\.c$/, '')] = src;
+    setMode(true);
+  } catch (_) { /* เปิดเป็นไฟล์ธรรมดา → ใช้โหมดจำลอง */ }
+}
+
+function init(){
+  buildStepper(); buildList();
+  const cm = $('#childMeters');
+  makeMeter(cm, 'cpu', 'CPU', LIM.time * 1.25, LIM.time, fmtMs);
+  makeMeter(cm, 'mem', 'MEM', LIM.mem * 1.25, LIM.mem, fmtKB);
+  makeMeter(cm, 'out', 'OUT', LIM.out * 1.25, LIM.out, fmtOut);
+  const hm = $('#hostMeters');
+  makeMeter(hm, 'hcpu', 'CPU', 100, 90, fmtPct);
+  makeMeter(hm, 'hram', 'RAM', 100, 90, fmtPct);
+  makeMeter(hm, 'hdisk', 'DISK', 100, 95, fmtPct);
+
+  $('#runBtn').onclick = run;
+  $('#resetBtn').onclick = resetView;
+  $('#pauseBtn').onclick = () => { S.paused = !S.paused; updateButtons(); };
+  $('#modeSim').onclick = () => setMode(false);
+  $('#modeLive').onclick = () => setMode(true);
+  $('#unsafeToggle').onchange = e => { S.unsafe = e.target.checked; $('#unsafeWrap').classList.toggle('on', S.unsafe); resetView(); };
+  document.querySelectorAll('#speedSeg button').forEach(b => b.onclick = () => {
+    S.speed = +b.dataset.s;
+    document.querySelectorAll('#speedSeg button').forEach(x => x.classList.toggle('on', x === b));
+  });
+  $('#themeBtn').onclick = () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA' && !(e.key === 'Enter' && (e.ctrlKey || e.metaKey))) return;
+    if (e.key === 'Enter') { e.preventDefault(); run(); }
+    else if (e.key === ' ' && S.busy) { e.preventDefault(); S.paused = !S.paused; updateButtons(); }
+    else if (e.key === 'r' || e.key === 'R') resetView();
+  });
+
+  selectEx(EX[0]);
+  detectLive();
+}
+init();
+</script>
+</body>
+</html>

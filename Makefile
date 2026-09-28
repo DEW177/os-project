@@ -23,7 +23,10 @@ build:
 test: $(BIN)
 	bash scripts/run_all_tests.sh
 
+demo: $(BIN)
+	python3 web/server.py
+
 clean:
 	rm -rf build $(BIN)
 
-.PHONY: all test clean
+.PHONY: all test demo clean
